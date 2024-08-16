@@ -6,64 +6,67 @@ export GREEN='\033[0;32m'
 export YELLOW='\033[1;33m'
 export NC='\033[0m'  # No Color
 
-execute_in_screen() {
+# 함수: 명령어 실행 및 결과 확인
+execute_command() {
     local message="$1"
     local command="$2"
     echo -e "${YELLOW}${message}${NC}"
-    screen -S 0glabs -X stuff "$command$(echo -e '\n')"
+    echo "Executing: $command"
+    eval "$command"
+    if [ $? -ne 0 ]; then
+        echo -e "${RED}Error: Command failed: $command${NC}" >&2
+        exit 1
+    fi
+    echo -e "${GREEN}Success: Command completed successfully.${NC}"
 }
 
-# 1. screen 설치
-echo "Installing screen..."
-sudo apt update && sudo apt install -y screen
+# 1. 패키지 업데이트 및 필수 패키지 설치
+execute_command "패키지 업데이트 중..." "sudo apt update"
+read -p "설치하려는 패키지들에 대한 권한을 부여하려면 Enter를 누르세요..."
+execute_command "screen 설치 중..." "sudo apt install -y screen"
 sleep 5
 
-# 2. 새로운 screen 세션 생성
-echo "Creating a new screen session named '0glabs'..."
-screen -S 0glabs -dm bash
+# 2. Go 설치
+execute_command "Go 1.22.0 다운로드 중..." "wget https://go.dev/dl/go1.22.0.linux-amd64.tar.gz"
 sleep 5
 
-# 3. 패키지 업데이트 및 필수 패키지 설치
-execute_in_screen "Updating package lists..." "sudo apt-get update"
-execute_in_screen "Installing clang, cmake, and build-essential..." "sudo apt-get install -y clang cmake build-essential"
+execute_command "Go 설치 후, 경로 추가 중..." "sudo rm -rf /usr/local/go && sudo tar -C /usr/local -xzf go1.22.0.linux-amd64.tar.gz"
+export PATH=$PATH:/usr/local/go/bin
+echo "PATH=$PATH"  # 경로가 제대로 추가되었는지 확인
 sleep 5
 
-# 4. Go 설치
-execute_in_screen "Downloading Go 1.22.0..." "wget https://go.dev/dl/go1.22.0.linux-amd64.tar.gz"
-execute_in_screen "Removing old Go installation and extracting new Go version..." "sudo rm -rf /usr/local/go && sudo tar -C /usr/local -xzf go1.22.0.linux-amd64.tar.gz"
-execute_in_screen "Adding Go to PATH..." "export PATH=\$PATH:/usr/local/go/bin"
+# 3. Rust 설치
+execute_command "Rust 설치 중..." "curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh"
 sleep 5
 
-# 5. Rust 설치
-execute_in_screen "Installing Rust..." "curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh"
+# 4. zgs.service 중지 및 제거
+execute_command "zgs.service 중지 중..." "sudo systemctl stop zgs.service"
+execute_command "zgs.service 비활성화 및 제거 중..." "sudo systemctl disable zgs.service && sudo rm /etc/systemd/system/zgs.service"
 sleep 5
 
-# 6. zgs.service 중지 및 제거
-execute_in_screen "Stopping and disabling zgs.service..." "sudo systemctl stop zgs.service"
-execute_in_screen "Removing zgs.service..." "sudo systemctl disable zgs.service && sudo rm /etc/systemd/system/zgs.service"
+# 5. 0g-storage-node 디렉토리 제거 및 리포지토리 클론
+execute_command "기존 0g-storage-node 디렉토리 제거 중..." "sudo rm -rf $HOME/0g-storage-node"
+execute_command "git 설치 중..." "sudo apt install -y git"
+read -p "Git을 설치한 후 계속하려면 Enter를 누르세요..."
+execute_command "0g-storage-node 리포지토리 클론 중..." "git clone https://github.com/0glabs/0g-storage-node.git"
+execute_command "특정 커밋 체크아웃 중..." "cd $HOME/0g-storage-node && git checkout 7d73ccd"
+execute_command "git 서브모듈 초기화 중..." "git submodule update --init"
 sleep 5
 
-# 7. 기존 0g-storage-node 디렉토리 제거 및 새로운 리포지토리 클론
-execute_in_screen "Removing old 0g-storage-node directory..." "sudo rm -rf \$HOME/0g-storage-node"
-execute_in_screen "Installing git..." "sudo apt install -y git"
-execute_in_screen "Cloning 0g-storage-node repository..." "git clone https://github.com/0glabs/0g-storage-node.git"
-execute_in_screen "Checking out specific commit 7d73ccd..." "cd \$HOME/0g-storage-node && git checkout 7d73ccd"
-execute_in_screen "Initializing git submodules..." "git submodule update --init"
-sleep 5
-
-# 8. Cargo 설치 및 빌드
-execute_in_screen "Installing Cargo..." "sudo apt install -y cargo"
-execute_in_screen "Building the 0g-storage-node with Cargo..." "cargo build --release"
+# 6. Cargo 설치 및 빌드
+execute_command "Cargo 설치 중..." "sudo apt install -y cargo"
+read -p "Cargo를 설치한 후 계속하려면 Enter를 누르세요..."
+execute_command "0g-storage-node 빌드 중..." "cargo build --release"
 sleep 10
 
-# 9. 0G_STORAGE_CONFIG.sh 스크립트 다운로드 및 실행
-execute_in_screen "Downloading 0G_STORAGE_CONFIG.sh..." "sudo wget -O \$HOME/0G_STORAGE_CONFIG.sh https://0g.service.nodebrand.xyz/0G/0G_STORAGE_CONFIG.sh"
-execute_in_screen "Making 0G_STORAGE_CONFIG.sh executable..." "chmod +x \$HOME/0G_STORAGE_CONFIG.sh"
-execute_in_screen "Executing 0G_STORAGE_CONFIG.sh..." "\$HOME/0G_STORAGE_CONFIG.sh"
+# 7. 0G_STORAGE_CONFIG.sh 다운로드 및 실행
+execute_command "0G_STORAGE_CONFIG.sh 다운로드 중..." "sudo wget -O $HOME/0G_STORAGE_CONFIG.sh https://0g.service.nodebrand.xyz/0G/0G_STORAGE_CONFIG.sh"
+execute_command "0G_STORAGE_CONFIG.sh 실행 권한 추가 중..." "chmod +x $HOME/0G_STORAGE_CONFIG.sh"
+execute_command "0G_STORAGE_CONFIG.sh 실행 중..." "$HOME/0G_STORAGE_CONFIG.sh"
 sleep 10
 
-# 10. zgs.service 파일 생성
-execute_in_screen "Creating zgs.service file..." "sudo tee /etc/systemd/system/zgs.service > /dev/null <<EOF
+# 8. zgs.service 파일 생성
+execute_command "zgs.service 파일 생성 중..." "sudo tee /etc/systemd/system/zgs.service > /dev/null <<EOF
 [Unit]
 Description=ZGS Node
 After=network.target
@@ -81,10 +84,11 @@ WantedBy=multi-user.target
 EOF"
 sleep 5
 
-# 11. UFW 설치 및 포트 개방
-execute_in_screen "Installing UFW..." "sudo apt-get install -y ufw"
-execute_in_screen "Enabling UFW..." "sudo ufw enable"
-execute_in_screen "Allowing necessary ports through UFW..." \
+# 9. UFW 설치 및 포트 개방
+execute_command "UFW 설치 중..." "sudo apt-get install -y ufw"
+read -p "UFW를 설치한 후 계속하려면 Enter를 누르세요..."
+execute_command "UFW 활성화 중..." "sudo ufw enable"
+execute_command "필요한 포트 개방 중..." \
     "sudo ufw allow ssh && \
      sudo ufw allow 26658 && \
      sudo ufw allow 26656 && \
@@ -94,10 +98,12 @@ execute_in_screen "Allowing necessary ports through UFW..." \
      sudo ufw allow 9091"
 sleep 5
 
-# 12. Systemd 서비스 재로드 및 zgs 서비스 시작
-execute_in_screen "Reloading systemd and starting zgs service..." "sudo systemctl daemon-reload && sudo systemctl enable zgs && sudo systemctl start zgs"
+# 10. Systemd 서비스 재로드 및 zgs 서비스 시작
+execute_command "Systemd 서비스 재로드 중..." "sudo systemctl daemon-reload"
+execute_command "zgs 서비스 활성화 중..." "sudo systemctl enable zgs"
+execute_command "zgs 서비스 시작 중..." "sudo systemctl start zgs"
 sleep 5
 
-echo -e "${YELLOW}모든작업이 완료되었습니다. 컨트롤+A+D로 스크린을 종료해주세요${NC}"
-
+echo -e "${GREEN}모든 작업이 완료되었습니다. 스크립트 실행을 종료합니다.${NC}"
+echo -e "${GREEN}스크립트작성자-kangjk${NC}"
 # 스크립트 작성자: kangjk

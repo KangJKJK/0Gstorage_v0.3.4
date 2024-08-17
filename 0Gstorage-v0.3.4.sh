@@ -46,12 +46,12 @@ npm install @solana/web3.js chalk bs58
 echo
 echo -e "${BOLD_BLUE}개인키를 입력해야합니다.${NC}"
 echo
-read -p "Solana월렛의 개인키를 입력하세요. 버너지갑을 사용하세요.: " privkey
+read -p "Solana 월렛의 개인키를 입력하세요. 버너지갑을 사용하세요.: " privkey
 echo
 echo -e "${BOLD_BLUE}Node.js 스크립트 파일을 생성합니다.${NC}"
 echo
 cat << EOF > kjk.mjs
-import { Connection, Keypair, SystemProgram, Transaction, sendAndConfirmTransaction, ComputeBudgetProgram } from "@solana/web3.js";
+import { Connection, Keypair, SystemProgram, Transaction, sendAndConfirmTransaction } from "@solana/web3.js";
 import chalk from "chalk";
 import bs58 from "bs58";
 
@@ -64,11 +64,6 @@ const to = Keypair.generate();
 (async () => {
     const tx = new Transaction();
 
-    // SetComputeUnitPrice
-    tx.add(
-        ComputeBudgetProgram.setComputeUnitPrice(50000)  // Set the price per compute unit
-    );
-
     // Add Transfer Instruction
     tx.add(
         SystemProgram.transfer({
@@ -76,11 +71,6 @@ const to = Keypair.generate();
             toPubkey: to.publicKey,
             lamports: 1000, // Amount to send (0.001 SOL)
         })
-    );
-
-    // SetComputeUnitLimit
-    tx.add(
-        ComputeBudgetProgram.setComputeUnitLimit(1400000)  // Set the compute unit limit
     );
 
     const txCount = 1;  // Number of transactions

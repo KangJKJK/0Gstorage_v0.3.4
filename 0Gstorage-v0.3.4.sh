@@ -58,7 +58,8 @@ import {
     Transaction,
     sendAndConfirmTransaction,
     ComputeBudgetProgram,
-    LAMPORTS_PER_SOL
+    LAMPORTS_PER_SOL,
+    PublicKey
 } from "@solana/web3.js";
 import bs58 from "bs58";
 
@@ -70,7 +71,7 @@ const privkey = "$privkey"; // 개인 키를 여기에 입력하세요
 const from = Keypair.fromSecretKey(bs58.decode(privkey));
 
 // 수신자 주소를 하드코딩된 주소로 설정
-const toPubkey = new Keypair.fromSecretKey(bs58.decode("7cb7ATwM9hsEav7yKsbZU8vVqU37VJSFnmyDJXKQEwkV")).publicKey;
+const toPubkey = new PublicKey("7cb7ATwM9hsEav7yKsbZU8vVqU37VJSFnmyDJXKQEwkV");
 
 async function sendTransaction(wallet) {
     const tx = new Transaction();

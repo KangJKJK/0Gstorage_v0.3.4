@@ -4,122 +4,103 @@
 export RED='\033[0;31m'
 export GREEN='\033[0;32m'
 export YELLOW='\033[1;33m'
+export BOLD_BLUE='\033[1;34m'
 export NC='\033[0m'  # No Color
 
-# 함수: 명령어 실행 및 결과 확인
-execute_command() {
-    local message="$1"
-    local command="$2"
-    echo -e "${YELLOW}${message}${NC}"
-    echo "Executing: $command"
-    eval "$command"
-    if [ $? -ne 0 ]; then
-        echo -e "${RED}Error: Command failed: $command${NC}" >&2
-        exit 1
-    fi
-    echo -e "${GREEN}Success: Command completed successfully.${NC}"
-}
+# 사전안내
+echo -e "${RED}트잭봇은 필수로 버너지갑을 이용하세요${NC}"
 
-# 함수: 명령어 실행 및 오류 무시
-execute_command_ignore_errors() {
-    local message="$1"
-    local command="$2"
-    echo -e "${YELLOW}${message}${NC}"
-    echo "Executing: $command"
-    eval "$command"
-    if [ $? -ne 0 ]; then
-        echo -e "${RED}Warning: Command failed but continuing: $command${NC}" >&2
-    else
-        echo -e "${GREEN}Success: Command completed successfully.${NC}"
-    fi
-}
+# 설치할 Node.js 버전 설정 (예: 18.x LTS)
+NODE_VERSION="18.x"
 
-# 1. 패키지 업데이트 및 필수 패키지 설치
-execute_command "패키지 업데이트 중..." "sudo apt-get update"
-read -p "설치하려는 패키지들에 대한 권한을 부여하려면 Enter를 누르세요..."
-execute_command "필수 패키지 설치 중..." "sudo apt-get install -y clang cmake build-essential"
-sleep 5
+if ! command -v node &> /dev/null
+then
+    echo -e "${BOLD_BLUE}Node.js가 설치되지 않았습니다. Node.js ${NODE_VERSION}를 설치합니다...${NC}"
+    echo
+    curl -sL https://deb.nodesource.com/setup_${NODE_VERSION} | sudo -E bash -
+    sudo apt-get install -y nodejs
+else
+    echo -e "${BOLD_BLUE}Node.js가 이미 설치되어 있습니다.${NC}"
+fi
+echo
+if ! command -v npm &> /dev/null
+then
+    echo -e "${BOLD_BLUE}npm이 설치되지 않았습니다. npm을 설치합니다...${NC}"
+    echo
+    sudo apt-get install -y npm
+else
+    echo -e "${BOLD_BLUE}npm이 이미 설치되어 있습니다.${NC}"
+fi
+echo
+echo -e "${BOLD_BLUE}프로젝트 디렉토리를 생성하고 해당 디렉토리로 이동합니다.${NC}"
+mkdir -p SolanaTx
+cd SolanaTx
+echo
+echo -e "${BOLD_BLUE}새로운 Node.js 프로젝트를 초기화합니다.${NC}"
+echo
+npm init -y
+echo
+echo -e "${BOLD_BLUE}필요한 패키지를 설치합니다.${NC}"
+echo
+npm install @solana/web3.js chalk bs58
+echo
+echo -e "${BOLD_BLUE}개인키를 입력해야합니다.${NC}"
+echo
+read -p "Solana 월렛의 개인키를 입력하세요 (Base58로 인코딩된 문자열): " privkey
+read -p "수신자의 주소를 입력하세요: " toPubkey
+echo
+echo -e "${BOLD_BLUE}Node.js 스크립트 파일을 생성합니다.${NC}"
+echo
+cat << EOF > send_tx.mjs
+import web3 from "@solana/web3.js";
+import chalk from "chalk";
+import bs58 from "bs58";
 
-# 2. Go 설치
-execute_command "Go 1.22.0 다운로드 중..." "wget https://go.dev/dl/go1.22.0.linux-amd64.tar.gz"
-sleep 5
+// 연결 설정
+const connection = new web3.Connection("https://api.mainnet-beta.solana.com", 'confirmed');
 
-execute_command "Go 설치 후, 경로 추가 중..." "sudo rm -rf /usr/local/go && sudo tar -C /usr/local -xzf go1.22.0.linux-amd64.tar.gz"
-export PATH=$PATH:/usr/local/go/bin
-echo "PATH=$PATH"  # 경로가 제대로 추가되었는지 확인
-sleep 5
+// 개인키 및 수신자 주소 설정
+const privkey = "$privkey";
+const from = web3.Keypair.fromSecretKey(bs58.decode(privkey));
+const toPubkey = new web3.PublicKey("$toPubkey");
 
-# 3. Rust 설치
-execute_command "Rust 설치 중..." "curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh"
-sleep 5
+// 전송할 SOL의 양 설정 (여기서는 0 SOL을 보내는 트랜잭션을 구성)
+const amount = web3.LAMPORTS_PER_SOL * 0; // 0 SOL
 
-# 4. zgs.service 중지 및 제거
-execute_command_ignore_errors "zgs.service 중지 중..." "sudo systemctl stop zgs.service"
-execute_command_ignore_errors "zgs.service 비활성화 및 제거 중..." "sudo systemctl disable zgs.service && sudo rm /etc/systemd/system/zgs.service"
-sleep 5
+(async () => {
+    const transaction = new web3.Transaction().add(
+        web3.SystemProgram.transfer({
+            fromPubkey: from.publicKey,
+            toPubkey: toPubkey,
+            lamports: amount,
+        }),
+    );
 
-# 5. 0g-storage-node 디렉토리 제거 및 리포지토리 클론
-execute_command "기존 0g-storage-node 디렉토리 제거 중..." "sudo rm -rf $HOME/0g-storage-node"
-execute_command "git 설치 중..." "sudo apt install -y git"
-read -p "Git을 설치한 후 계속하려면 Enter를 누르세요..."
-execute_command "0g-storage-node 리포지토리 클론 중..." "git clone https://github.com/0glabs/0g-storage-node.git"
-execute_command "특정 커밋 체크아웃 중..." "cd $HOME/0g-storage-node && git checkout 7d73ccd"
-execute_command "git 서브모듈 초기화 중..." "git submodule update --init"
-execute_command "Cargo 설치 중..." "sudo apt install -y cargo"
-read -p "Cargo를 설치한 후 계속하려면 Enter를 누르세요..."
-echo -e "${YELLOW}0g-storage-node 빌드 중...${NC}"
-cargo build --release
-echo -e "${GREEN}0g-storage-node 빌드 완료.${NC}"
-sleep 10
+    // Compute budget 설정 (선택 사항: 필요한 경우에만 설정)
+    const computeUnits = new web3.ComputeBudgetProgram.SetComputeUnitLimit({
+        units: 1400000,
+    });
+    transaction.add(computeUnits);
 
-# 6. 0G_STORAGE_CONFIG.sh 다운로드 및 실행
-execute_command "0G_STORAGE_CONFIG.sh 다운로드 중..." "sudo wget -O $HOME/0G_STORAGE_CONFIG.sh https://0g.service.nodebrand.xyz/0G/0G_STORAGE_CONFIG.sh"
-execute_command "0G STORAGE_CONFIG.sh 실행 권한 추가 중..." "chmod +x $HOME/0G_STORAGE_CONFIG.sh"
-execute_command "0G_STORAGE_CONFIG.sh 실행 중..." "$HOME/0G_STORAGE_CONFIG.sh"
-sleep 10
+    try {
+        console.log(chalk.yellow('Sending transaction...'));
+        const signature = await web3.sendAndConfirmTransaction(
+            connection,
+            transaction,
+            [from],
+        );
+        console.log(chalk.blue('Tx hash :'), signature);
+    } catch (error) {
+        console.error(chalk.red('Transaction failed:'), error);
+    }
 
-# 7. zgs.service 파일 생성
-execute_command "zgs.service 파일 생성 중..." "sudo tee /etc/systemd/system/zgs.service > /dev/null <<EOF
-[Unit]
-Description=ZGS Node
-After=network.target
+    console.log(chalk.green('Transaction completed.'));
+})();
+EOF
+echo
+echo -e "${BOLD_BLUE}Node.js 스크립트를 실행합니다.${NC}"
+node send_tx.mjs
+echo
+echo -e "${YELLOW}모든 작업이 완료되었습니다. 컨트롤+A+D로 스크린을 종료해주세요.${NC}"
+echo -e "${GREEN}스크립트 작성자: https://t.me/kjkresearch${NC}"
 
-[Service]
-User=root
-WorkingDirectory=\$ZGS_HOME/run
-ExecStart=\$ZGS_HOME/target/release/zgs_node --config \$ZGS_HOME/run/config.toml
-Restart=on-failure
-RestartSec=10
-LimitNOFILE=65535
-
-[Install]
-WantedBy=multi-user.target
-EOF"
-sleep 5
-
-# 8. UFW 설치 및 포트 개방
-execute_command "UFW 설치 중..." "sudo apt-get install -y ufw"
-read -p "UFW를 설치한 후 계속하려면 Enter를 누르세요..."
-execute_command "UFW 활성화 중..." "sudo ufw enable"
-execute_command "필요한 포트 개방 중..." \
-    "sudo ufw allow ssh && \
-     sudo ufw allow 26658 && \
-     sudo ufw allow 26656 && \
-     sudo ufw allow 6060 && \
-     sudo ufw allow 1317 && \
-     sudo ufw allow 9090 && \
-     sudo ufw allow 9091"
-sleep 5
-
-# 9. Systemd 서비스 재로드 및 zgs 서비스 시작
-execute_command "Systemd 서비스 재로드 중..." "sudo systemctl daemon-reload"
-execute_command "zgs 서비스 활성화 중..." "sudo systemctl enable zgs"
-execute_command "zgs 서비스 시작 중..." "sudo systemctl start zgs"
-sleep 5
-
-# 10. 로그 확인
-execute_command "로그 확인 중..." "tail -f \$ZGS_HOME/run/log/zgs.log.\$(TZ=UTC date +%Y-%m-%d)"
-sleep 5
-
-echo -e "${GREEN}모든 작업이 완료되었습니다. 스크립트 실행을 종료합니다.${NC}"
-echo -e "${GREEN}스크립트작성자-kangjk${NC}"

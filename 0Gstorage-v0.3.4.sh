@@ -55,7 +55,7 @@ import { Connection, Keypair, SystemProgram, Transaction, sendAndConfirmTransact
 import chalk from "chalk";
 import bs58 from "bs58";
 
-const connection = new Connection("https://api.mainnet-beta.solana.com", 'confirmed');
+const connection = new Connection("https://devnet.sonic.game", 'confirmed');
 
 const privkey = "$privkey"; // 개인 키를 여기에 입력하세요
 const from = Keypair.fromSecretKey(bs58.decode(privkey));

@@ -57,7 +57,8 @@ import {
     SystemProgram,
     Transaction,
     sendAndConfirmTransaction,
-    ComputeBudgetProgram
+    ComputeBudgetProgram,
+    LAMPORTS_PER_SOL
 } from "@solana/web3.js";
 import bs58 from "bs58";
 
@@ -90,7 +91,7 @@ async function sendTransaction(wallet) {
         SystemProgram.transfer({
             fromPubkey: from.publicKey,
             toPubkey: to.publicKey,
-            lamports: 1000 // 전송할 SOL 수 (0.001 SOL)
+            lamports: LAMPORTS_PER_SOL * 0.001 // 전송할 SOL 수 (0.001 SOL)
         })
     );
 
@@ -115,3 +116,4 @@ node kjk.mjs
 echo
 echo -e "${YELLOW}모든 작업이 완료되었습니다. 컨트롤+A+D로 스크린을 종료해주세요.${NC}"
 echo -e "${GREEN}스크립트 작성자: https://t.me/kjkresearch${NC}"
+

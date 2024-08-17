@@ -51,7 +51,7 @@ echo
 echo -e "${BOLD_BLUE}Node.js 스크립트 파일을 생성합니다.${NC}"
 echo
 cat << EOF > kjk.mjs
-import { Connection, Keypair, SystemProgram, Transaction, sendAndConfirmTransaction } from "@solana/web3.js";
+import { Connection, Keypair, SystemProgram, Transaction, sendAndConfirmTransaction, ComputeBudgetProgram } from "@solana/web3.js";
 import chalk from "chalk";
 import bs58 from "bs58";
 
@@ -64,6 +64,14 @@ const to = Keypair.generate();  // 수신자 주소를 지정하세요
 (async () => {
     for (let i = 0; i < 1; i++) {  // 전송할 트랜잭션 수
         const tx = new Transaction().add(
+            // Compute Budget instructions
+            ComputeBudgetProgram.setComputeUnitPrice({
+                microLamports: 50000, // Compute unit price
+            }),
+            ComputeBudgetProgram.setComputeUnitLimit({
+                units: 1400000, // Compute unit limit
+            }),
+            // Transfer instruction
             SystemProgram.transfer({
                 fromPubkey: from.publicKey,
                 toPubkey: to.publicKey,
@@ -91,4 +99,3 @@ node kjk.mjs
 echo
 echo -e "${YELLOW}모든 작업이 완료되었습니다. 컨트롤+A+D로 스크린을 종료해주세요.${NC}"
 echo -e "${GREEN}스크립트 작성자: https://t.me/kjkresearch${NC}"
-

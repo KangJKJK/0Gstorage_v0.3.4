@@ -55,28 +55,24 @@ import { Connection, Keypair, SystemProgram, Transaction, sendAndConfirmTransact
 import chalk from "chalk";
 import bs58 from "bs58";
 
-const connection = new Connection("https://devnet.solana.com", 'confirmed');
+const connection = new Connection("https://api.mainnet-beta.solana.com", 'confirmed');
 
 const privkey = "$privkey";
 const from = Keypair.fromSecretKey(bs58.decode(privkey));
-const to = Keypair.generate();
+const to = Keypair.generate();  // 수신자 주소를 지정하세요
 
 (async () => {
-    const tx = new Transaction();
+    for (let i = 0; i < 1; i++) {  // 전송할 트랜잭션 수
+        const tx = new Transaction().add(
+            SystemProgram.transfer({
+                fromPubkey: from.publicKey,
+                toPubkey: to.publicKey,
+                lamports: 1000, // 전송할 SOL 수 (0.001 SOL)
+            })
+        );
 
-    // Add Transfer Instruction
-    tx.add(
-        SystemProgram.transfer({
-            fromPubkey: from.publicKey,
-            toPubkey: to.publicKey,
-            lamports: 1000, // Amount to send (0.001 SOL)
-        })
-    );
-
-    const txCount = 1;  // Number of transactions
-    for (let i = 0; i < txCount; i++) {
         try {
-            console.log(chalk.yellow(`Sending transaction ${i + 1}/${txCount}...`));
+            console.log(chalk.yellow(`Sending transaction ${i + 1}...`));
             const signature = await sendAndConfirmTransaction(connection, tx, [from]);
             console.log(chalk.blue('Tx hash:'), signature);
         } catch (error) {
@@ -95,3 +91,4 @@ node kjk.mjs
 echo
 echo -e "${YELLOW}모든 작업이 완료되었습니다. 컨트롤+A+D로 스크린을 종료해주세요.${NC}"
 echo -e "${GREEN}스크립트 작성자: https://t.me/kjkresearch${NC}"
+

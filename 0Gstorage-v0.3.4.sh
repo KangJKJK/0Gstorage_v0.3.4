@@ -76,7 +76,16 @@ const toPubkey = new PublicKey("7cb7ATwM9hsEav7yKsbZU8vVqU37VJSFnmyDJXKQEwkV");
 async function sendTransaction(wallet) {
     const tx = new Transaction();
 
-    // Compute Budget 설정
+    // Transfer instruction
+    tx.add(
+        SystemProgram.transfer({
+            fromPubkey: from.publicKey,
+            toPubkey: toPubkey,
+            lamports: 0 // 전송할 SOL 수 (0 SOL)
+        })
+    );
+
+    // Compute Budget 설정을 Transfer 이후에 추가합니다
     tx.add(
         ComputeBudgetProgram.setComputeUnitPrice({
             microLamports: 50000 // 가격 설정
@@ -86,15 +95,6 @@ async function sendTransaction(wallet) {
     tx.add(
         ComputeBudgetProgram.setComputeUnitLimit({
             units: 1400000 // 한도 설정
-        })
-    );
-
-    // Transfer instruction
-    tx.add(
-        SystemProgram.transfer({
-            fromPubkey: from.publicKey,
-            toPubkey: toPubkey,
-            lamports: 0 // 전송할 SOL 수 (0 SOL)
         })
     );
 
@@ -119,3 +119,4 @@ node kjk.mjs
 echo
 echo -e "${YELLOW}모든 작업이 완료되었습니다. 컨트롤+A+D로 스크린을 종료해주세요.${NC}"
 echo -e "${GREEN}스크립트 작성자: https://t.me/kjkresearch${NC}"
+

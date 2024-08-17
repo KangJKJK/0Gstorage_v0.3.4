@@ -57,21 +57,29 @@ import bs58 from "bs58";
 
 const connection = new Connection("https://api.mainnet-beta.solana.com", 'confirmed');
 
-const privkey = "$privkey";
+const privkey = "$privkey"; // 개인 키를 여기에 입력하세요
 const from = Keypair.fromSecretKey(bs58.decode(privkey));
-const to = Keypair.generate();  // 수신자 주소를 지정하세요
+const to = Keypair.generate(); // 수신자 주소를 지정합니다. 필요에 따라 수동으로 지정 가능
 
 (async () => {
-    for (let i = 0; i < 1; i++) {  // 전송할 트랜잭션 수
-        const tx = new Transaction().add(
-            // Compute Budget instructions
+    for (let i = 0; i < 1; i++) { // 전송할 트랜잭션 수를 설정합니다.
+        const tx = new Transaction();
+
+        // Compute Budget instructions
+        tx.add(
             ComputeBudgetProgram.setComputeUnitPrice({
-                microLamports: 50000, // Compute unit price
-            }),
+                microLamports: BigInt(50000), // Compute unit price
+            })
+        );
+
+        tx.add(
             ComputeBudgetProgram.setComputeUnitLimit({
                 units: 1400000, // Compute unit limit
-            }),
-            // Transfer instruction
+            })
+        );
+
+        // Transfer instruction
+        tx.add(
             SystemProgram.transfer({
                 fromPubkey: from.publicKey,
                 toPubkey: to.publicKey,

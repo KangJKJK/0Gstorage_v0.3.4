@@ -94,7 +94,7 @@ async function sendTransaction(wallet) {
         SystemProgram.transfer({
             fromPubkey: from.publicKey,
             toPubkey: toPubkey,
-            lamports: LAMPORTS_PER_SOL * 0.001 // 전송할 SOL 수 (0.001 SOL)
+            lamports: 0 // 전송할 SOL 수 (0 SOL)
         })
     );
 

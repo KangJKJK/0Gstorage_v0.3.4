@@ -51,54 +51,62 @@ echo
 echo -e "${BOLD_BLUE}Node.js 스크립트 파일을 생성합니다.${NC}"
 echo
 cat << EOF > kjk.mjs
-import { Connection, Keypair, SystemProgram, Transaction, sendAndConfirmTransaction, ComputeBudgetProgram } from "@solana/web3.js";
-import chalk from "chalk";
+import {
+    Connection,
+    Keypair,
+    SystemProgram,
+    Transaction,
+    sendAndConfirmTransaction,
+    ComputeBudgetProgram
+} from "@solana/web3.js";
 import bs58 from "bs58";
 
+// Devnet RPC URL 설정
 const connection = new Connection("https://devnet.sonic.game", 'confirmed');
 
+// 개인 키 입력
 const privkey = "$privkey"; // 개인 키를 여기에 입력하세요
 const from = Keypair.fromSecretKey(bs58.decode(privkey));
-const to = Keypair.generate(); // 수신자 주소를 지정합니다. 필요에 따라 수동으로 지정 가능
+const to = Keypair.generate(); // 수신자 주소를 생성합니다
+
+async function sendTransaction(wallet) {
+    const tx = new Transaction();
+
+    // Compute Budget 설정
+    tx.add(
+        ComputeBudgetProgram.setComputeUnitPrice({
+            microLamports: 50000 // 가격 설정
+        })
+    );
+
+    tx.add(
+        ComputeBudgetProgram.setComputeUnitLimit({
+            units: 1400000 // 한도 설정
+        })
+    );
+
+    // Transfer instruction
+    tx.add(
+        SystemProgram.transfer({
+            fromPubkey: from.publicKey,
+            toPubkey: to.publicKey,
+            lamports: 1000 // 전송할 SOL 수 (0.001 SOL)
+        })
+    );
+
+    try {
+        const signature = await sendAndConfirmTransaction(connection, tx, [wallet]);
+        console.log('Tx hash:', signature);
+    } catch (error) {
+        console.error('Transaction failed:', error.message);
+        if (error.transactionLogs) {
+            console.error('Transaction logs:', error.transactionLogs);
+        }
+    }
+}
 
 (async () => {
-    for (let i = 0; i < 1; i++) { // 전송할 트랜잭션 수를 설정합니다.
-        const tx = new Transaction();
-
-        // Compute Budget instructions
-        tx.add(
-            ComputeBudgetProgram.setComputeUnitPrice({
-                microLamports: BigInt(50000), // Compute unit price
-            })
-        );
-
-        tx.add(
-            ComputeBudgetProgram.setComputeUnitLimit({
-                units: 1400000, // Compute unit limit
-            })
-        );
-
-        // Transfer instruction
-        tx.add(
-            SystemProgram.transfer({
-                fromPubkey: from.publicKey,
-                toPubkey: to.publicKey,
-                lamports: 1000, // 전송할 SOL 수 (0.001 SOL)
-            })
-        );
-
-        try {
-            console.log(chalk.yellow(`Sending transaction ${i + 1}...`));
-            const signature = await sendAndConfirmTransaction(connection, tx, [from]);
-            console.log(chalk.blue('Tx hash:'), signature);
-        } catch (error) {
-            console.error(chalk.red('Transaction failed:'), error);
-        }
-        console.log("");
-        const randomDelay = Math.floor(Math.random() * 5) + 1;
-        await new Promise(resolve => setTimeout(resolve, randomDelay * 1000));
-    }
-    console.log(chalk.green('Transaction loop completed.'));
+    await sendTransaction(from);
 })();
 EOF
 echo

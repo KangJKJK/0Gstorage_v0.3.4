@@ -33,8 +33,8 @@ else
 fi
 echo
 echo -e "${BOLD_BLUE}프로젝트 디렉토리를 생성하고 해당 디렉토리로 이동합니다.${NC}"
-mkdir -p SolanaTx
-cd SolanaTx
+mkdir -p SonicBatchTx
+cd SonicBatchTx
 echo
 echo -e "${BOLD_BLUE}새로운 Node.js 프로젝트를 초기화합니다.${NC}"
 echo
@@ -46,61 +46,62 @@ npm install @solana/web3.js chalk bs58
 echo
 echo -e "${BOLD_BLUE}개인키를 입력해야합니다.${NC}"
 echo
-read -p "Solana 월렛의 개인키를 입력하세요 (Base58로 인코딩된 문자열): " privkey
-read -p "수신자의 주소를 입력하세요: " toPubkey
+read -p "Solana월렛의 개인키를 입력하세요. 버너지갑을 사용하세요.: " privkey
 echo
 echo -e "${BOLD_BLUE}Node.js 스크립트 파일을 생성합니다.${NC}"
 echo
-cat << EOF > send_tx.mjs
-import web3 from "@solana/web3.js";
+cat << EOF > kjk.mjs
+import { Connection, Keypair, SystemProgram, Transaction, sendAndConfirmTransaction, ComputeBudgetProgram } from "@solana/web3.js";
 import chalk from "chalk";
 import bs58 from "bs58";
 
-// 연결 설정
-const connection = new web3.Connection("https://api.mainnet-beta.solana.com", 'confirmed');
+const connection = new Connection("https://devnet.solana.com", 'confirmed');
 
-// 개인키 및 수신자 주소 설정
 const privkey = "$privkey";
-const from = web3.Keypair.fromSecretKey(bs58.decode(privkey));
-const toPubkey = new web3.PublicKey("$toPubkey");
-
-// 전송할 SOL의 양 설정 (여기서는 0 SOL을 보내는 트랜잭션을 구성)
-const amount = web3.LAMPORTS_PER_SOL * 0; // 0 SOL
+const from = Keypair.fromSecretKey(bs58.decode(privkey));
+const to = Keypair.generate();
 
 (async () => {
-    const transaction = new web3.Transaction().add(
-        web3.SystemProgram.transfer({
-            fromPubkey: from.publicKey,
-            toPubkey: toPubkey,
-            lamports: amount,
-        }),
+    const tx = new Transaction();
+
+    // SetComputeUnitPrice
+    tx.add(
+        ComputeBudgetProgram.setComputeUnitPrice(50000)  // Set the price per compute unit
     );
 
-    // Compute budget 설정 (선택 사항: 필요한 경우에만 설정)
-    const computeUnits = new web3.ComputeBudgetProgram.SetComputeUnitLimit({
-        units: 1400000,
-    });
-    transaction.add(computeUnits);
+    // Add Transfer Instruction
+    tx.add(
+        SystemProgram.transfer({
+            fromPubkey: from.publicKey,
+            toPubkey: to.publicKey,
+            lamports: 1000, // Amount to send (0.001 SOL)
+        })
+    );
 
-    try {
-        console.log(chalk.yellow('Sending transaction...'));
-        const signature = await web3.sendAndConfirmTransaction(
-            connection,
-            transaction,
-            [from],
-        );
-        console.log(chalk.blue('Tx hash :'), signature);
-    } catch (error) {
-        console.error(chalk.red('Transaction failed:'), error);
+    // SetComputeUnitLimit
+    tx.add(
+        ComputeBudgetProgram.setComputeUnitLimit(1400000)  // Set the compute unit limit
+    );
+
+    const txCount = 1;  // Number of transactions
+    for (let i = 0; i < txCount; i++) {
+        try {
+            console.log(chalk.yellow(`Sending transaction ${i + 1}/${txCount}...`));
+            const signature = await sendAndConfirmTransaction(connection, tx, [from]);
+            console.log(chalk.blue('Tx hash:'), signature);
+        } catch (error) {
+            console.error(chalk.red('Transaction failed:'), error);
+        }
+        console.log("");
+        const randomDelay = Math.floor(Math.random() * 5) + 1;
+        await new Promise(resolve => setTimeout(resolve, randomDelay * 1000));
     }
-
-    console.log(chalk.green('Transaction completed.'));
+    console.log(chalk.green('Transaction loop completed.'));
 })();
 EOF
 echo
 echo -e "${BOLD_BLUE}Node.js 스크립트를 실행합니다.${NC}"
-node send_tx.mjs
+node kjk.mjs
 echo
 echo -e "${YELLOW}모든 작업이 완료되었습니다. 컨트롤+A+D로 스크린을 종료해주세요.${NC}"
 echo -e "${GREEN}스크립트 작성자: https://t.me/kjkresearch${NC}"
-

